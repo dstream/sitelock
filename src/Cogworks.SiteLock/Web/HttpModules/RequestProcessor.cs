@@ -16,29 +16,36 @@ namespace Cogworks.SiteLock.Web.HttpModules
             _authChecker = authenticationChecker;
         }
 
+        private bool isFile(HttpRequestBase request)
+        {
+            return request.Url.AbsolutePath.IndexOf('.') != -1;
+        }
 
         public void ProcessRequest(HttpContextBase httpContext)
         {
-            var requestUri = httpContext.Request.Url;
-            var absolutePath = requestUri.AbsolutePath;
-            var urlReferrer = httpContext.Request.UrlReferrer;
-
-            if (RequestHelper.IsLockedDomain(_config, requestUri.Host))
+            if (!isFile(httpContext.Request))
             {
-                if (RequestHelper.IsAllowedIP(_config, httpContext.Request.UserHostAddress)) { return; }
+                var requestUri = httpContext.Request.Url;
+                var absolutePath = requestUri.AbsolutePath;
+                var urlReferrer = httpContext.Request.UrlReferrer;
 
-                if (RequestHelper.IsAllowedReferrerPath(_config, absolutePath, urlReferrer)) { return; }
-
-                if (RequestHelper.IsAllowedPath(_config, absolutePath)) { return; }
-
-                if (RequestHelper.IsUmbracoAllowedPath(_config, absolutePath, urlReferrer)) { return; }
-
-                // get here if path is not allowed
-                if (!_authChecker.IsAuthenticated(httpContext))
+                if (RequestHelper.IsLockedDomain(_config, requestUri.Host))
                 {
-                    httpContext.Response.StatusCode = 403;
+                    if (RequestHelper.IsAllowedIP(_config, httpContext.Request.UserHostAddress)) { return; }
 
-                    throw new HttpException(403, "Locked by Cogworks.SiteLock Module");
+                    if (RequestHelper.IsAllowedReferrerPath(_config, absolutePath, urlReferrer)) { return; }
+
+                    if (RequestHelper.IsAllowedPath(_config, absolutePath)) { return; }
+
+                    if (RequestHelper.IsUmbracoAllowedPath(_config, absolutePath, urlReferrer)) { return; }
+
+                    // get here if path is not allowed
+                    if (!_authChecker.IsAuthenticated(httpContext))
+                    {
+                        httpContext.Response.StatusCode = 403;
+
+                        throw new HttpException(403, "Locked by Cogworks.SiteLock Module");
+                    }
                 }
             }
         }
